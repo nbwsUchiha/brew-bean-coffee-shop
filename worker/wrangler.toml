@@ -1,0 +1,7 @@
+name = "coffee-shop-api"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+
+[vars]
+STRIPE_SUCCESS_URL = "http://localhost:5173/success"
+STRIPE_CANCEL_URL = "http://localhost:5173/cancel"
