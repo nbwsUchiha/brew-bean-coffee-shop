@@ -46,5 +46,12 @@ gh secret set STRIPE_SECRET_KEY --repo "$REPO" --body "$STRIPE_SECRET_KEY"
 gh secret set STRIPE_WEBHOOK_SECRET --repo "$REPO" --body "$STRIPE_WEBHOOK_SECRET"
 gh secret set STRIPE_SUCCESS_URL --repo "$REPO" --body "$STRIPE_SUCCESS_URL"
 gh secret set STRIPE_CANCEL_URL --repo "$REPO" --body "$STRIPE_CANCEL_URL"
+gh secret set VITE_SITE_URL --repo "$REPO" --body "${VITE_SITE_URL:-https://${CLOUDFLARE_PAGES_PROJECT_NAME}.pages.dev}"
+if [[ -n "${ADMIN_SETUP_SECRET:-}" ]]; then
+  gh secret set ADMIN_SETUP_SECRET --repo "$REPO" --body "$ADMIN_SETUP_SECRET"
+fi
+if [[ -n "${RESEND_API_KEY:-}" ]]; then
+  gh secret set RESEND_API_KEY --repo "$REPO" --body "$RESEND_API_KEY"
+fi
 
 echo "Done. Push to main to trigger deploy."
