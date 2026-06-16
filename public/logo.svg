@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-label="Brew and Bean">
+  <defs>
+    <linearGradient id="cup" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#8b5e3c"/>
+      <stop offset="100%" stop-color="#5c3d2e"/>
+    </linearGradient>
+  </defs>
+  <circle cx="24" cy="24" r="24" fill="url(#cup)"/>
+  <g fill="#fff">
+    <path d="M14 18h20c1.1 0 2 .9 2 2v10c0 5.5-4.5 10-10 10h-4c-5.5 0-10-4.5-10-10V20c0-1.1.9-2 2-2z"/>
+    <path d="M34 20h3c2.2 0 4 1.8 4 4s-1.8 4-4 4h-3" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+    <ellipse cx="24" cy="20" rx="8" ry="2" opacity=".45"/>
+    <path d="M18 14c2 2 10 2 12 0" fill="none" stroke="#f0d9c3" stroke-width="2" stroke-linecap="round"/>
+  </g>
+</svg>

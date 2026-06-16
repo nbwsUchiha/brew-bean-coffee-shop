@@ -1,5 +1,5 @@
 import { FormEvent, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../lib/apiClient";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -13,7 +13,10 @@ export default function CheckoutPage() {
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!itemId) { setError("Missing item. Go back to the catalog."); return; }
+    if (!itemId) {
+      setError("Missing item. Go back to the menu.");
+      return;
+    }
     setLoading(true);
     setError("");
     try {
@@ -26,17 +29,31 @@ export default function CheckoutPage() {
   };
 
   return (
-    <section>
-      <h1>Checkout</h1>
-      <form onSubmit={onSubmit} className="card" style={{ maxWidth: 420 }}>
-        <label>
-          Email
-          <input value={email} onChange={(e) => setEmail(e.target.value)} required type="email" style={{ display: "block", width: "100%", marginTop: 8, padding: 8 }} />
+    <section className="checkout-page">
+      <header className="section-head">
+        <p className="eyebrow">Almost there</p>
+        <h1>Checkout</h1>
+        <p className="lede">We&apos;ll email your receipt and have your drink ready for pickup.</p>
+      </header>
+
+      <form onSubmit={onSubmit} className="card checkout-card">
+        <label className="field">
+          <span>Email for receipt</span>
+          <input
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            type="email"
+            placeholder="you@example.com"
+          />
         </label>
         {error && <p className="error">{error}</p>}
-        <button className="btn primary" type="submit" disabled={loading} style={{ marginTop: 16, border: 0, cursor: "pointer" }}>
-          {loading ? "Redirecting…" : "Pay with Stripe"}
+        <button className="btn primary btn-block" type="submit" disabled={loading}>
+          {loading ? "Redirecting to Stripe…" : "Pay with Stripe"}
         </button>
+        <Link className="text-link" to="/catalog">
+          ← Back to menu
+        </Link>
       </form>
     </section>
   );

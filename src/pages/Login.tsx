@@ -21,26 +21,58 @@ export default function LoginPage() {
 
   if (userEmail) {
     return (
-      <section>
-        <h1>Account</h1>
-        <p>Signed in as {userEmail}</p>
-        <button className="btn ghost" onClick={() => signOut()}>Sign out</button>
+      <section className="checkout-page">
+        <div className="card checkout-card">
+          <p className="eyebrow">Welcome back</p>
+          <h1>Your account</h1>
+          <p className="lede">Signed in as {userEmail}</p>
+          <button className="btn primary btn-block" type="button" onClick={() => signOut()}>
+            Sign out
+          </button>
+        </div>
       </section>
     );
   }
 
   return (
-    <section>
-      <h1>{mode === "signin" ? "Sign in" : "Create account"}</h1>
-      <form onSubmit={onSubmit} className="card" style={{ maxWidth: 420 }}>
-        <input placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required style={{ display: "block", width: "100%", marginBottom: 8, padding: 8 }} />
-        <input placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required style={{ display: "block", width: "100%", marginBottom: 8, padding: 8 }} />
+    <section className="checkout-page">
+      <header className="section-head">
+        <p className="eyebrow">Members</p>
+        <h1>{mode === "signin" ? "Sign in" : "Create account"}</h1>
+      </header>
+      <form onSubmit={onSubmit} className="card checkout-card">
+        <label className="field">
+          <span>Email</span>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            placeholder="you@example.com"
+          />
+        </label>
+        <label className="field">
+          <span>Password</span>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            placeholder="••••••••"
+          />
+        </label>
         {error && <p className="error">{error}</p>}
-        <button className="btn primary" type="submit" style={{ border: 0, cursor: "pointer" }}>{mode === "signin" ? "Sign in" : "Sign up"}</button>
+        <button className="btn primary btn-block" type="submit">
+          {mode === "signin" ? "Sign in" : "Sign up"}
+        </button>
+        <button
+          className="text-link"
+          type="button"
+          onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
+        >
+          {mode === "signin" ? "Need an account? Sign up" : "Already have an account? Sign in"}
+        </button>
       </form>
-      <button className="btn ghost" style={{ marginTop: 12 }} onClick={() => setMode(mode === "signin" ? "signup" : "signin")}>
-        {mode === "signin" ? "Need an account?" : "Already have an account?"}
-      </button>
     </section>
   );
 }
