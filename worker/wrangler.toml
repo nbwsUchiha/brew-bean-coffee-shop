@@ -3,5 +3,10 @@ main = "src/index.ts"
 compatibility_date = "2024-09-23"
 
 [vars]
-STRIPE_SUCCESS_URL = "https://brew-bean-coffee.pages.dev/success"
+STRIPE_SUCCESS_URL = "https://brew-bean-coffee.pages.dev/success?session_id={CHECKOUT_SESSION_ID}"
 STRIPE_CANCEL_URL = "https://brew-bean-coffee.pages.dev/cancel"
+STORE_NAME = "Brew & Bean Coffee"
+ALLOWED_ORIGINS = "http://localhost:5173,https://brew-bean-coffee.pages.dev"
+TAX_RATE_BPS = "800"
+PICKUP_FEE_CENTS = "0"
+DELIVERY_FEE_CENTS = "499"

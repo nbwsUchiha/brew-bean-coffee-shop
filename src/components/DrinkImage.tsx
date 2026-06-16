@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { imageForDrink } from "../data/drinkImages";
 
-type Props = { name: string };
+type Props = { name: string; src?: string | null };
 
-export default function DrinkImage({ name }: Props) {
+export default function DrinkImage({ name, src }: Props) {
   const [failed, setFailed] = useState(false);
   const slug = name.toLowerCase().replace(/\s+/g, "-");
+  const imageSrc = src || imageForDrink(name);
 
   if (failed) {
     return (
@@ -17,9 +18,11 @@ export default function DrinkImage({ name }: Props) {
 
   return (
     <img
-      src={imageForDrink(name)}
+      src={imageSrc}
       alt={name}
       loading="lazy"
+      width={400}
+      height={300}
       onError={() => setFailed(true)}
     />
   );

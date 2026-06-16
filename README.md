@@ -1,65 +1,111 @@
 # Brew & Bean Coffee
 
-Order your favorite drinks online for pickup.
+Production-ready full-stack coffee ecommerce: order online for pickup or local delivery.
 
-**GitHub repo:** `brew-bean-coffee-shop` (standalone repository — own `origin`, branches, commits, and secrets)
+**Live site:** https://brew-bean-coffee.pages.dev/
 
-Full-stack portfolio site: Vite + React, Cloudflare Pages + Workers, Supabase, Stripe.
+## Technology stack
 
-## Stack
+| Layer | Technology |
+|-------|------------|
+| Frontend | Vite, React 18, React Router, Tailwind CSS |
+| API | Cloudflare Worker (`coffee-shop-api`) |
+| Database & auth | Supabase Postgres + Auth |
+| Payments | Stripe Checkout (test mode) |
+| Email | Resend (optional) |
+| Deploy | Cloudflare Pages + Workers, GitHub Actions |
 
-- **Frontend:** Vite + React → Cloudflare Pages
-- **API:** Cloudflare Worker (`/v1/*`)
-- **Database / auth:** Supabase Postgres + Auth
-- **Payments:** Stripe Checkout (one-time)
+## Architecture
 
-## Business mode
+```
+Browser (Pages) ──► Worker /v1/* ──► Supabase (service role)
+                 └──► Supabase Auth (anon key, client-side)
+Stripe ──webhook──► Worker ──► orders, inventory, emails
+```
 
-`ordering` — Menu with Stripe checkout.
+- **Public product reads** use Worker → Supabase with RLS-friendly queries.
+- **Checkout** validates cart lines, loads prices from DB, creates Stripe session server-side.
+- **Orders** are confirmed only after Stripe webhook signature verification.
+- **Admin** routes require JWT + `profiles.role = 'admin'`.
 
 ## Local setup
 
 ```bash
 cp .env.example .env.local
 cp worker/.dev.vars.example worker/.dev.vars
-# Fill Supabase + Stripe values in both files
+# Fill Supabase + Stripe values
 npm install
 cd worker && npm install && cd ..
-npm run dev
+npm run dev          # frontend :5173
+cd worker && npm run dev   # API :8787
 ```
 
-Worker (second terminal):
+## Database migrations
+
+In Supabase SQL Editor, run in order:
+
+1. `migrations/001_schema.sql`
+2. `migrations/002_order_paid_at.sql`
+3. `migrations/003_ecommerce_schema.sql`
+4. `migrations/004_storage.sql`
+5. `migrations/seed.sql`
+
+## Supabase setup
+
+1. Create a dedicated Supabase project.
+2. Run migrations above.
+3. **Authentication → URL Configuration:**
+   - Site URL: `https://brew-bean-coffee.pages.dev`
+   - Redirect URLs: `https://brew-bean-coffee.pages.dev/**`, `http://localhost:5173/**`
+4. Enable email confirmations (recommended).
+5. Storage bucket `product-images` is created by `004_storage.sql`.
+
+See also [docs/SUPABASE_AUTH.md](docs/SUPABASE_AUTH.md).
+
+## Stripe setup (test mode)
+
+1. Create products are **not** required in Stripe — prices come from your database.
+2. Use **test** keys (`sk_test_...`).
+3. Create webhook endpoint: `https://<your-worker>.workers.dev/v1/webhooks/stripe`
+4. Events: `checkout.session.completed`
+5. Copy signing secret to `STRIPE_WEBHOOK_SECRET`.
+
+## Admin creation
+
+1. Sign up a user on the site.
+2. Set `ADMIN_SETUP_SECRET` on the Worker.
+3. Call once:
 
 ```bash
-cd worker && npm run dev
+curl -X POST https://<worker>/v1/admin/setup \
+  -H "Content-Type: application/json" \
+  -d '{"email":"you@example.com","secret":"YOUR_ADMIN_SETUP_SECRET"}'
 ```
 
-## Database (Supabase)
+Or in SQL: `update profiles set role = 'admin' where email = 'you@example.com';`
 
-1. Create a **new** Supabase project for this site only.
-2. SQL Editor → run `migrations/001_schema.sql`
-3. Run `migrations/seed.sql` for sample data.
+## Environment variables
 
-## Go live (Cloudflare + GitHub Actions)
+See [.env.example](.env.example) — public `VITE_*` vars vs private Worker secrets.
 
-Add these **repository secrets** (Settings → Secrets and variables → Actions):
+## Testing
 
-| Secret | Purpose |
-|--------|---------|
-| `VITE_API_BASE_URL` | Worker URL (e.g. `https://coffee-shop-api.your-subdomain.workers.dev`) |
-| `VITE_SUPABASE_URL` | Supabase project URL |
-| `VITE_SUPABASE_ANON_KEY` | Supabase anon key |
-| `CLOUDFLARE_API_TOKEN` | Pages + Workers deploy token |
-| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID |
-| `CLOUDFLARE_PAGES_PROJECT_NAME` | Pages project name |
-| `SUPABASE_URL` | Worker Supabase URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | Worker service role (secret) |
-| `STRIPE_SECRET_KEY` | Stripe secret key |
-| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret |
-| `STRIPE_SUCCESS_URL` | `https://your-pages-domain/success` |
-| `STRIPE_CANCEL_URL` | `https://your-pages-domain/cancel` |
+```bash
+npm test
+cd worker && npm test
+npm run lint
+cd worker && npm run lint
+npm run build
+```
 
-Push to `main` → CI builds → deploy workflow publishes frontend + worker.
+## Deployment
+
+GitHub Actions:
+
+- **CI** — lint, test, build on PR/push
+- **Deploy** — after CI passes on `main`, deploys Pages + Worker
+
+Required repository secrets: `VITE_API_BASE_URL`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_SITE_URL`, `CLOUDFLARE_*`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_*`, `CLOUDFLARE_PAGES_PROJECT_NAME`.
 
 ## Routes
 
@@ -67,5 +113,16 @@ Push to `main` → CI builds → deploy workflow publishes frontend + worker.
 |------|------|
 | Home | `/` |
 | Menu | `/catalog` |
+| Product | `/product/:slug` |
+| Cart | `/cart` |
 | Checkout | `/checkout` |
-| Login | `/login` |
+| Account | `/account` |
+| Admin | `/admin` |
+| Contact | `/contact` |
+
+## Troubleshooting
+
+- **CORS errors** — ensure `ALLOWED_ORIGINS` includes your Pages URL.
+- **Webhook not updating orders** — verify `STRIPE_WEBHOOK_SECRET` and endpoint URL.
+- **Empty menu** — run migrations + seed; check Worker `SUPABASE_*` secrets.
+- **Auth redirect to localhost** — update Supabase redirect allowlist (see docs).

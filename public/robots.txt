@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://brew-bean-coffee.pages.dev/sitemap.xml
