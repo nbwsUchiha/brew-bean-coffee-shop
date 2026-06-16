@@ -1,5 +1,5 @@
 import type { Env, Product } from "../types";
-import { supabaseFetch } from "../supabase";
+import { supabaseFetch, assertSupabaseConfigured } from "../supabase";
 import { json, errorResponse } from "../cors";
 
 const PRODUCT_SELECT =
@@ -7,6 +7,7 @@ const PRODUCT_SELECT =
 
 export async function handleProducts(request: Request, env: Env, url: URL) {
   if (url.pathname === "/v1/catalog" && request.method === "GET") {
+    assertSupabaseConfigured(env);
     const rows = (await supabaseFetch(
       env,
       "/rest/v1/products?available=eq.true&select=" + encodeURIComponent(PRODUCT_SELECT) + "&order=featured.desc,name.asc",

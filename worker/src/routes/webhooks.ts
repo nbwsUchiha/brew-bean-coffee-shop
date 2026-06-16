@@ -10,12 +10,13 @@ export async function handleStripeWebhook(request: Request, env: Env, url: URL) 
 
   const rawBody = await request.text();
   const secret = env.STRIPE_WEBHOOK_SECRET;
-
-  if (secret) {
-    const sig = request.headers.get("Stripe-Signature");
-    const valid = await verifyStripeWebhook(rawBody, sig, secret);
-    if (!valid) return errorResponse(request, env, "Invalid webhook signature", 400);
+  if (!secret) {
+    return errorResponse(request, env, "Webhook not configured", 503);
   }
+
+  const sig = request.headers.get("Stripe-Signature");
+  const valid = await verifyStripeWebhook(rawBody, sig, secret);
+  if (!valid) return errorResponse(request, env, "Invalid webhook signature", 400);
 
   const event = parseStripeEvent(rawBody);
 

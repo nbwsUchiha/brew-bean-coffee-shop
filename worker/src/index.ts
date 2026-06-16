@@ -43,10 +43,11 @@ export default {
       if (err instanceof AuthError) return errorResponse(request, env, err.message, 401);
       if (err instanceof ValidationError) return errorResponse(request, env, err.message, 400);
       const message = err instanceof Error ? err.message : "Internal error";
-      if (!message.startsWith("Database error") && !message.startsWith("Payment")) {
-        console.error("Unhandled error");
+      const isDb = message.startsWith("Database error");
+      if (!isDb && !message.startsWith("Payment")) {
+        console.error("Unhandled error:", message.slice(0, 120));
       }
-      return errorResponse(request, env, message.startsWith("Database") ? "Service unavailable" : message, 500);
+      return errorResponse(request, env, isDb ? "Service unavailable" : "Internal error", isDb ? 503 : 500);
     }
   },
 };

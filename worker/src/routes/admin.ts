@@ -34,6 +34,8 @@ export async function handleAdmin(request: Request, env: Env, url: URL) {
     return json(request, env, { data: { ok: true } });
   }
 
+  if (!url.pathname.startsWith("/v1/admin/")) return null;
+
   try {
     await requireAdmin(request, env);
   } catch {

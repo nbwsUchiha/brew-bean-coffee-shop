@@ -17,12 +17,28 @@ export async function supabaseFetch(env: Env, path: string, init: RequestInit = 
     body = text;
   }
   if (!res.ok) {
-    const msg = typeof body === "object" && body && "message" in body
-      ? String((body as { message: string }).message)
-      : text;
+    const msg =
+      typeof body === "object" && body && "message" in body
+        ? String((body as { message: string }).message)
+        : text;
     throw new Error("Database error: " + msg);
   }
   return body;
+}
+
+function isSupabaseConfigured(env: Env): boolean {
+  return Boolean(
+    env.SUPABASE_URL?.includes("supabase.co") &&
+      env.SUPABASE_SERVICE_ROLE_KEY &&
+      env.SUPABASE_SERVICE_ROLE_KEY.length > 40 &&
+      !env.SUPABASE_SERVICE_ROLE_KEY.includes("your-service-role"),
+  );
+}
+
+export function assertSupabaseConfigured(env: Env) {
+  if (!isSupabaseConfigured(env)) {
+    throw new Error("Database error: Supabase is not configured on the server");
+  }
 }
 
 export async function supabaseUserFetch(
