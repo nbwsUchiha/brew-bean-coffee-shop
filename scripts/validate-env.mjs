@@ -30,7 +30,7 @@ function meta(val) {
   return {
     set: true,
     len: val.length,
-    placeholder: /YOUR_PROJECT|your-anon|your-service|sk_test_\.\.\.|whsec_\.\.\.|choose-a-long/i.test(val),
+    placeholder: /YOUR_PROJECT|your-anon|your-service|sk_test_\.\.\.|whsec_\.\.\.|^choose-a-long-random-secret$/i.test(val),
     jwt: val.startsWith("eyJ"),
     sk: val.startsWith("sk_test_") || val.startsWith("sk_live_"),
     whsec: val.startsWith("whsec_"),
@@ -45,12 +45,19 @@ const worker = loadEnvFile(resolve(root, "worker/.dev.vars"));
 
 const frontendAllowed = ["VITE_API_BASE_URL", "VITE_SUPABASE_URL", "VITE_SUPABASE_ANON_KEY", "VITE_SITE_URL"];
 const frontendForbidden = [
+  "SUPABASE_URL",
   "SUPABASE_SERVICE_ROLE_KEY",
   "STRIPE_SECRET_KEY",
   "STRIPE_WEBHOOK_SECRET",
   "CLOUDFLARE_API_TOKEN",
+  "CLOUDFLARE_ACCOUNT_ID",
+  "CLOUDFLARE_PAGES_PROJECT_NAME",
   "ADMIN_SETUP_SECRET",
   "RESEND_API_KEY",
+  "RESEND_FROM",
+  "STRIPE_SUCCESS_URL",
+  "STRIPE_CANCEL_URL",
+  "ALLOWED_ORIGINS",
 ];
 
 if (!local) issues.push(".env.local missing");
@@ -97,19 +104,20 @@ else {
   for (const k of workerRequired) {
     const m = meta(worker[k]);
     if (!m.set) issues.push(`worker/.dev.vars missing ${k}`);
-    else if (m.placeholder) issues.push(`worker/.dev.vars ${k} looks like placeholder`);
+    else if (k === "ADMIN_SETUP_SECRET" && m.len < 12) issues.push(`worker/.dev.vars ${k} looks like placeholder`);
+    else if (k !== "ADMIN_SETUP_SECRET" && m.placeholder) issues.push(`worker/.dev.vars ${k} looks like placeholder`);
     else passes.push(`worker/.dev.vars ${k} ok`);
   }
   const success =
     worker.STRIPE_SUCCESS_URL ===
     "https://brew-bean-coffee.pages.dev/success?session_id={CHECKOUT_SESSION_ID}";
   const cancel = worker.STRIPE_CANCEL_URL === "https://brew-bean-coffee.pages.dev/cart";
-  const origins = worker.ALLOWED_ORIGINS === "https://brew-bean-coffee.pages.dev";
+  const originsOk = worker.ALLOWED_ORIGINS?.includes("https://brew-bean-coffee.pages.dev");
   if (!success) issues.push("worker/.dev.vars STRIPE_SUCCESS_URL mismatch");
   else passes.push("worker/.dev.vars STRIPE_SUCCESS_URL url ok");
   if (!cancel) issues.push("worker/.dev.vars STRIPE_CANCEL_URL should be https://brew-bean-coffee.pages.dev/cart");
   else passes.push("worker/.dev.vars STRIPE_CANCEL_URL url ok");
-  if (!origins) issues.push("worker/.dev.vars ALLOWED_ORIGINS should be https://brew-bean-coffee.pages.dev");
+  if (!originsOk) issues.push("worker/.dev.vars ALLOWED_ORIGINS must include https://brew-bean-coffee.pages.dev");
   else passes.push("worker/.dev.vars ALLOWED_ORIGINS url ok");
 }
 

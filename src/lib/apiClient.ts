@@ -73,6 +73,7 @@ export const api = {
     request<Order>(`/v1/orders/by-session?session_id=${encodeURIComponent(sessionId)}`),
   getOrders: () => request<Order[]>("/v1/orders"),
   getOrder: (id: string) => request<Order>(`/v1/orders/${encodeURIComponent(id)}`),
+  linkGuestOrders: () => request<{ linked: number }>("/v1/orders/link-guest", { method: "POST" }),
 
   getProfile: () => request<Profile | null>("/v1/profile"),
   updateProfile: (payload: Record<string, string | undefined>) =>

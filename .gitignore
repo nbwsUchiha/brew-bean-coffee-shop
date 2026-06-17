@@ -6,3 +6,5 @@ dist
 .env.local
 .env.deploy
 .DS_Store
+test-results
+playwright-report

@@ -39,6 +39,25 @@ export async function createStripeCheckoutSession(
   return data;
 }
 
+/** Sign a webhook payload for tests and tooling (matches verifyStripeWebhook). */
+export async function signStripeWebhook(
+  payload: string,
+  secret: string,
+  timestamp = Math.floor(Date.now() / 1000),
+): Promise<string> {
+  const signedPayload = `${timestamp}.${payload}`;
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(signedPayload));
+  const v1 = [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  return `t=${timestamp},v1=${v1}`;
+}
+
 /** Verify Stripe webhook signature (HMAC SHA256). */
 export async function verifyStripeWebhook(
   payload: string,

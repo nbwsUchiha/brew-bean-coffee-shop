@@ -22,22 +22,43 @@ function perksFromStats(stats: SiteStats | null) {
   if (!stats) {
     return [
       { title: "Loading menu…", text: "Fetching live store info." },
-      { title: "Quick pickup", text: "Order ahead and skip the line." },
-      { title: "Secure checkout", text: "Pay safely with Stripe." },
+      { title: "Loading orders…", text: "Checking recent activity." },
+      { title: "Estimating pickup…", text: "Checking the current queue." },
     ];
   }
+
+  const menuDetail =
+    stats.featuredCount > 0 && stats.categoryCount > 0
+      ? `${stats.featuredCount} featured · ${stats.categoryCount} categories`
+      : stats.categoryCount > 0
+        ? `Across ${stats.categoryCount} categories`
+        : "Freshly brewed options available to order now";
+
+  const ordersDetail =
+    stats.ordersToday > 0
+      ? `${stats.ordersToday} order${stats.ordersToday === 1 ? "" : "s"} today · ${formatRelativeTime(stats.lastOrderAt)}`
+      : formatRelativeTime(stats.lastOrderAt);
+
+  const pickupDetail =
+    stats.queueAhead > 0
+      ? `${stats.queueAhead} drink${stats.queueAhead === 1 ? "" : "s"} ahead in the queue right now`
+      : "No queue right now — order ahead and skip the line";
+
   return [
     {
-      title: `${stats.menuCount} drinks on the menu`,
-      text: "Freshly brewed options available to order now.",
+      title: `${stats.menuCount} drink${stats.menuCount === 1 ? "" : "s"} on the menu`,
+      text:
+        stats.lowStockCount > 0
+          ? `${menuDetail} · ${stats.lowStockCount} running low`
+          : menuDetail,
     },
     {
-      title: `${stats.ordersFulfilled} orders fulfilled`,
-      text: formatRelativeTime(stats.lastOrderAt),
+      title: `${stats.ordersFulfilled} order${stats.ordersFulfilled === 1 ? "" : "s"} fulfilled`,
+      text: ordersDetail,
     },
     {
       title: `Pickup in ~${stats.pickupMinutes} min`,
-      text: "Pay securely with Stripe. Receipt emailed after checkout.",
+      text: pickupDetail,
     },
   ];
 }

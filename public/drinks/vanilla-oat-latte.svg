@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="Vanilla oat latte">
+  <rect width="400" height="300" fill="#f7f0e8"/>
+  <rect x="145" y="70" width="110" height="160" rx="16" fill="#e8d4b8"/>
+  <ellipse cx="200" cy="80" rx="62" ry="15" fill="#fff8ef"/>
+  <rect x="185" y="130" width="30" height="6" rx="3" fill="#f5e6c8"/>
+  <rect x="180" y="145" width="40" height="5" rx="2" fill="#edd9b8" opacity=".8"/>
+</svg>

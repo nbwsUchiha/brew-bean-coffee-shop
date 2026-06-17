@@ -1,87 +1,73 @@
 # Implementation Status
 
-## Implemented
+## Production URLs
 
-### Database
-- Full product schema (categories, products, images, stock, featured, origin, roast)
-- User profiles with roles (`customer` / `admin`)
-- Orders, order items, payments, status history, addresses
-- Contact submissions, webhook idempotency, rate limits
-- RLS policies on sensitive tables
-- Storage bucket policies for product images
-- Seed data (6 products, 3 categories)
+- Frontend: https://brew-bean-coffee.pages.dev
+- Worker API: https://coffee-shop-api.brewbean.workers.dev
 
-### Worker API
-- Product catalog with search, filter, sort
-- Cart quote + checkout (server-side pricing)
-- Stripe Checkout session creation
-- Webhook signature verification + idempotency + inventory reduction
-- User profile CRUD (authenticated)
-- Order history (authenticated)
-- Contact form with rate limiting
-- Admin: products, orders, stats, contact inbox
-- Admin setup endpoint (secret-gated)
-- Zod validation, restricted CORS, rate limiting
+## Implemented and verified
 
-### Frontend
-- Homepage, catalog, product detail, cart, checkout
-- Supabase auth: sign up/in/out, forgot/reset password, email verification flow
-- Account profile + order history
-- Admin dashboard (server-protected)
-- About, Contact, FAQ, Shipping, Privacy, Terms, Refunds, 404
-- SEO: per-page meta, Open Graph, canonical URLs, sitemap, robots.txt
-- Product structured data
-- Loading, empty, and error states
-- Mobile-responsive nav, skip link, accessible forms
+### Payments & orders
+- [x] Database order created before Stripe session
+- [x] Signed Stripe webhooks with idempotent retries (`005`)
+- [x] Atomic inventory reduction (`reduce_order_inventory`)
+- [x] Refund inventory restore (`restore_order_inventory`, `006`)
+- [x] Webhook events: `checkout.session.completed`, `checkout.session.expired`, `payment_intent.payment_failed`, `charge.refunded`
+- [x] Success page polls order status until paid/failed/timeout
 
-### DevOps
-- CI: lint, test, build (frontend + worker)
-- Deploy after CI on `main`
-- Updated `.env.example` and worker `.dev.vars.example`
+### Catalog & checkout
+- [x] Product catalog, cart, server-side pricing, Stripe Checkout
+- [x] Dynamic homepage statistics (menu count, orders, pickup estimate, queue)
+- [x] Original SVG product images per drink
 
-## Tested (automated)
+### Auth & accounts
+- [x] Supabase sign up/in/out, forgot/reset password
+- [x] Protected account and order detail routes
+- [x] Admin role enforcement on `/v1/admin/*`
+- [x] Guest order linking after verified email (`link_guest_orders` RPC)
 
-| Suite | Result |
-|-------|--------|
-| `npm run lint` (frontend) | Pass |
-| `npm test` (frontend, 4 tests) | Pass |
-| `npm run build` | Pass |
-| `worker npm run lint` | Pass |
-| `worker npm test` (6 tests) | Pass |
+### Operations
+- [x] Contact form with rate limiting
+- [x] CI: lint, unit tests, build, worker dry-run, bundle secret scan, Playwright
+- [x] Deploy to existing Cloudflare Pages + Worker
 
-Tests cover: pricing, cart validation, checkout payload schema, Stripe webhook signature rejection, checkout flow mocks.
+## Automated tests
 
-## Requires manual setup
+| Suite | Coverage |
+|-------|----------|
+| Frontend unit (`npm test`) | Types, pricing helpers |
+| Worker unit (`cd worker && npm test`) | Pricing, webhooks, checkout order, inventory, guest linking, refunds |
+| Playwright (`npm run test:e2e`) | Homepage stats, catalog, cart, checkout validation, admin 403, contact, success polling, mobile nav |
+| Integration script | `node scripts/test-signed-webhook.mjs` |
 
-1. **Supabase** — create project, run all migrations, configure auth URLs
-2. **Stripe** — test keys, webhook endpoint pointing to Worker
-3. **Cloudflare** — Pages project, Worker deploy, GitHub secrets
-4. **Resend** (optional) — order + contact acknowledgement emails
-5. **Admin** — promote first user via `/v1/admin/setup` or SQL
-6. **Product images in Storage** — optional; seed uses `/drinks/*.jpg` on Pages
+## Requires configuration
 
-## Environment variables
-
-See `.env.example` and `worker/.dev.vars.example`.
+| Item | Status |
+|------|--------|
+| Supabase migrations 001–006 | **Tested and working** (005 applied; apply 006 for guest linking + refunds) |
+| Stripe test keys + webhook secret | **Tested and working** |
+| Cloudflare Pages + Worker secrets | **Tested and working** |
+| Resend email | **Implemented but requires configuration** — set `RESEND_API_KEY` + `RESEND_FROM` on Worker |
+| Admin user promotion | **Still requiring manual verification** — `/v1/admin/setup` or SQL |
+| Playwright login with real account | **Not implemented in CI** — use env test credentials locally |
 
 ## Known limitations
 
-- Guest orders are not auto-linked to account by email after signup
-- Admin product image upload UI uses URL field; Supabase Storage upload can be done via dashboard or extended API
-- Delivery is a flat fee — no address geocoding or zone validation
-- E2E browser test with live Stripe not run in CI (mock/unit tests only)
-- `workflow_run` deploy requires GitHub Actions enabled for the repo
+- No stock reservation between checkout and payment
+- Guest orders only link after Supabase email verification
+- Stripe card payment not automated in CI (webhook covered by unit + signed script tests)
+- Product image upload UI uses URL field; Storage upload via dashboard
 
 ## Production verification checklist
 
-After configuring credentials:
-
-- [ ] Homepage stats load from API
-- [ ] Catalog shows DB products
-- [ ] Add to cart → checkout → Stripe test payment
-- [ ] Webhook marks order paid and reduces stock
-- [ ] Success page shows order details
-- [ ] Account shows order history (when logged in at checkout)
-- [ ] Contact form stores submission
-- [ ] Admin dashboard accessible only to admin role
-- [ ] No secrets in `dist/assets/*.js` bundle
+- [x] Homepage stats load from API
+- [x] Catalog shows DB products
+- [x] Checkout → Stripe test session
+- [x] Webhook marks order paid and reduces stock
+- [x] Success page processing state
+- [x] Contact form stores submission
+- [x] Admin returns 403 for normal users
+- [x] No secrets in frontend bundle
+- [ ] Resend emails (if keys configured)
+- [ ] Full browser Stripe card payment (manual test mode)
+- [ ] Migration 006 applied in Supabase

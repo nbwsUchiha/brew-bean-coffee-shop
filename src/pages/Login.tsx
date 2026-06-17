@@ -14,11 +14,16 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const from = (location.state as { from?: string })?.from || "/account";
+  const from = (location.state as { from?: string; signupEmail?: string })?.from || "/account";
+  const signupEmail = (location.state as { signupEmail?: string })?.signupEmail;
 
   useEffect(() => {
     if (userEmail) navigate(from, { replace: true });
   }, [userEmail, from, navigate]);
+
+  useEffect(() => {
+    if (signupEmail && mode === "signup") setEmail(signupEmail);
+  }, [signupEmail, mode]);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();

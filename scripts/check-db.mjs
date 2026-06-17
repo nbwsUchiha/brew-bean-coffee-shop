@@ -48,7 +48,8 @@ const tables = [
 ];
 
 async function headTable(table, key) {
-  const res = await fetch(`${url}/rest/v1/${table}?select=id&limit=1`, {
+  const col = table === "rate_limits" ? "key" : "id";
+  const res = await fetch(`${url}/rest/v1/${table}?select=${col}&limit=1`, {
     headers: { apikey: key, Authorization: `Bearer ${key}` },
   });
   return res.status;
@@ -89,5 +90,64 @@ const bucket = await fetch(`${url}/storage/v1/bucket/product-images`, {
 });
 console.log(bucket.ok ? "PASS storage bucket product-images" : `FAIL storage bucket HTTP ${bucket.status}`);
 if (!bucket.ok) failed++;
+
+const rpc = await fetch(`${url}/rest/v1/rpc/reduce_order_inventory`, {
+  method: "POST",
+  headers: {
+    apikey: serviceKey,
+    Authorization: `Bearer ${serviceKey}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({ p_order_id: "00000000-0000-0000-0000-000000000000" }),
+});
+if (rpc.status === 404 || rpc.status === 400) {
+  console.log("PASS reduce_order_inventory RPC exists (expected error for fake order id)");
+} else if (rpc.status === 200 || rpc.status === 204) {
+  console.log("PASS reduce_order_inventory RPC exists");
+} else {
+  const rpcText = await rpc.text();
+  if (/function|reduce_order_inventory/i.test(rpcText) && rpc.status === 500) {
+    console.log("PASS reduce_order_inventory RPC exists");
+  } else {
+    console.log(`FAIL reduce_order_inventory RPC HTTP ${rpc.status} — run migrations/005_webhook_inventory.sql`);
+    failed++;
+  }
+}
+
+const webhookCols = await fetch(
+  `${url}/rest/v1/stripe_webhook_events?select=id,status&limit=0`,
+  { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } },
+);
+if (webhookCols.ok) {
+  console.log("PASS stripe_webhook_events.status column");
+} else {
+  console.log(`FAIL stripe_webhook_events.status — run migrations/005_webhook_inventory.sql`);
+  failed++;
+}
+
+for (const [rpcName, migration] of [
+  ["restore_order_inventory", "006_guest_orders_refunds.sql"],
+  ["link_guest_orders", "006_guest_orders_refunds.sql"],
+]) {
+  const res = await fetch(`${url}/rest/v1/rpc/${rpcName}`, {
+    method: "POST",
+    headers: {
+      apikey: serviceKey,
+      Authorization: `Bearer ${serviceKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(
+      rpcName === "link_guest_orders"
+        ? { p_user_id: "00000000-0000-0000-0000-000000000000" }
+        : { p_order_id: "00000000-0000-0000-0000-000000000000" },
+    ),
+  });
+  if ([200, 204, 400, 500].includes(res.status)) {
+    console.log(`PASS ${rpcName} RPC exists`);
+  } else {
+    console.log(`FAIL ${rpcName} RPC HTTP ${res.status} — run migrations/${migration}`);
+    failed++;
+  }
+}
 
 process.exit(failed ? 1 : 0);

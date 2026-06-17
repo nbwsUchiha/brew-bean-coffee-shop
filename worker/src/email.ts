@@ -15,7 +15,10 @@ function formatTimestamp(iso: string) {
 async function sendEmail(env: Env, to: string, subject: string, html: string) {
   const apiKey = env.RESEND_API_KEY;
   const from = env.RESEND_FROM || "Brew & Bean <onboarding@resend.dev>";
-  if (!apiKey) return;
+  if (!apiKey) {
+    console.log("Email skipped: RESEND_API_KEY not configured");
+    return false;
+  }
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -26,7 +29,11 @@ async function sendEmail(env: Env, to: string, subject: string, html: string) {
     body: JSON.stringify({ from, to: [to], subject, html }),
   });
 
-  if (!res.ok) console.error("Email delivery failed");
+  if (!res.ok) {
+    console.error("Email delivery failed: HTTP", res.status);
+    return false;
+  }
+  return true;
 }
 
 function emailShell(env: Env, title: string, body: string) {
@@ -105,4 +112,19 @@ export async function sendContactAckEmail(env: Env, name: string, email: string)
     `<p style="color:#6b5c52">Hi ${name}, thanks for contacting ${store}. We'll get back to you within one business day.</p>`,
   );
   await sendEmail(env, email, `${store} — message received`, html);
+}
+
+export async function sendRefundEmail(
+  env: Env,
+  order: { order_number: string | null; customer_email: string | null; total_cents: number },
+) {
+  const to = order.customer_email;
+  if (!to) return;
+  const store = env.STORE_NAME || "Brew & Bean Coffee";
+  const html = emailShell(
+    env,
+    "Refund processed",
+    `<p style="color:#6b5c52">Your order <strong>${order.order_number || ""}</strong> has been refunded for <strong>${formatMoney(order.total_cents)}</strong>. Allow a few business days for the refund to appear on your statement.</p>`,
+  );
+  await sendEmail(env, to, `${store} refund — ${order.order_number || "order"}`, html);
 }

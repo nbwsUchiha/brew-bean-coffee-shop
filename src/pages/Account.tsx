@@ -22,6 +22,9 @@ function AccountContent() {
 
   useEffect(() => {
     api.getOrders().then(setOrders).catch((e) => setError(e.message));
+    api.linkGuestOrders().catch(() => {
+      // Silently ignore when email is not verified yet or no guest orders exist.
+    });
   }, []);
 
   useEffect(() => {

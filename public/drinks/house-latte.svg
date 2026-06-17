@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="House latte">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#d4a574"/><stop offset="100%" stop-color="#8b5e3c"/></linearGradient></defs>
+  <rect width="400" height="300" fill="#f5ebe0"/>
+  <rect x="140" y="60" width="120" height="170" rx="16" fill="url(#g)"/>
+  <ellipse cx="200" cy="70" rx="70" ry="18" fill="#fff8f0" opacity=".9"/>
+  <path d="M260 120 Q290 140 260 180" fill="none" stroke="#c9a882" stroke-width="8"/>
+</svg>

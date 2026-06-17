@@ -1,13 +1,15 @@
-/** Realistic drink photos — hosted locally so they always load on Pages */
+/** Product image paths — original SVG illustrations in /public/drinks */
 export const drinkImages: Record<string, string> = {
-  "House Latte": "/drinks/house-latte.jpg",
-  "Cold Brew": "/drinks/cold-brew.jpg",
-  "Matcha Oat Latte": "/drinks/matcha-oat-latte.jpg",
+  "House Latte": "/drinks/house-latte.svg",
+  "Cold Brew": "/drinks/cold-brew.svg",
+  "Matcha Oat Latte": "/drinks/matcha-oat-latte.svg",
+  Cappuccino: "/drinks/cappuccino.svg",
+  "Iced Americano": "/drinks/iced-americano.svg",
+  "Vanilla Oat Latte": "/drinks/vanilla-oat-latte.svg",
 };
 
-export const heroImage =
-  "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=1600&q=80";
+export const heroImage = "/drinks/hero-coffee.svg";
 
 export function imageForDrink(name: string): string {
-  return drinkImages[name] ?? "/drinks/house-latte.jpg";
+  return drinkImages[name] ?? "/drinks/house-latte.svg";
 }

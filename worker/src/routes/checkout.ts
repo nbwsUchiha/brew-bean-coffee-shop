@@ -1,12 +1,15 @@
 import type { Env } from "../types";
-import { supabaseFetch } from "../supabase";
-import { requireUser } from "../auth";
 import { json, errorResponse } from "../cors";
 import { checkoutSchema, parseBody } from "../validation";
 import { priceCart } from "../pricing";
 import { fetchProductsByIds } from "./products";
 import { createStripeCheckoutSession } from "../stripe";
 import { checkRateLimit, clientIp } from "../rateLimit";
+import {
+  createPendingOrder,
+  attachStripeSessionToOrder,
+  markCheckoutFailed,
+} from "../checkoutOrder";
 
 export async function handleCheckout(request: Request, env: Env, url: URL) {
   if (url.pathname === "/v1/checkout/quote" && request.method === "POST") {
@@ -62,84 +65,50 @@ export async function handleCheckout(request: Request, env: Env, url: URL) {
       lineItems.push({ name: "Tax", unitAmountCents: totals.taxCents, quantity: 1 });
     }
 
-    const orderNumber = (await supabaseFetch(env, "/rest/v1/rpc/generate_order_number", {
-      method: "POST",
-      body: "{}",
-    })) as string;
+    let orderId: string | null = null;
+    let orderNumber: string | null = null;
 
-    const session = await createStripeCheckoutSession(env, {
-      email: body.email,
-      lineItems,
-      metadata: {
-        project: "coffee-shop",
-        order_number: orderNumber,
-        fulfillment_method: fulfillmentMethod,
-      },
-    });
+    try {
+      const pending = await createPendingOrder(
+        env,
+        totals,
+        { email: body.email, customerName: body.customerName, fulfillmentMethod },
+        user,
+      );
+      orderId = pending.orderId;
+      orderNumber = pending.orderNumber;
 
-    if (!session.id || !session.url) throw new Error("Payment session could not be created");
+      const session = await createStripeCheckoutSession(env, {
+        email: body.email,
+        lineItems,
+        metadata: {
+          project: "coffee-shop",
+          order_id: orderId,
+          order_number: orderNumber,
+          fulfillment_method: fulfillmentMethod,
+        },
+      });
 
-    const orderInsert = {
-      order_number: orderNumber,
-      user_id: user?.id ?? null,
-      customer_email: body.email,
-      customer_name: body.customerName ?? null,
-      amount_cents: totals.totalCents,
-      subtotal_cents: totals.subtotalCents,
-      tax_cents: totals.taxCents,
-      shipping_cents: totals.shippingCents,
-      total_cents: totals.totalCents,
-      status: "pending",
-      payment_status: "pending",
-      order_status: "pending",
-      stripe_session_id: session.id,
-      checkout_mode: "payment",
-      fulfillment_method: fulfillmentMethod,
-    };
+      if (!session.id || !session.url) {
+        throw new Error("Payment session could not be created");
+      }
 
-    const orders = (await supabaseFetch(env, "/rest/v1/orders", {
-      method: "POST",
-      headers: { Prefer: "return=representation" },
-      body: JSON.stringify(orderInsert),
-    })) as Array<{ id: string }>;
+      await attachStripeSessionToOrder(env, orderId, session.id);
 
-    const orderId = orders[0]?.id;
-    if (!orderId) throw new Error("Failed to create order");
-
-    const orderItems = totals.lines.map((l) => ({
-      order_id: orderId,
-      product_id: l.productId,
-      product_name: l.name,
-      product_slug: l.slug,
-      quantity: l.quantity,
-      unit_price_cents: l.unitPriceCents,
-      line_total_cents: l.lineTotalCents,
-    }));
-
-    await supabaseFetch(env, "/rest/v1/order_items", {
-      method: "POST",
-      headers: { Prefer: "return=minimal" },
-      body: JSON.stringify(orderItems),
-    });
-
-    await supabaseFetch(env, "/rest/v1/payments", {
-      method: "POST",
-      headers: { Prefer: "return=minimal" },
-      body: JSON.stringify({
-        order_id: orderId,
-        stripe_session_id: session.id,
-        amount_cents: totals.totalCents,
-        status: "pending",
-      }),
-    });
-
-    await supabaseFetch(env, "/rest/v1/order_status_history", {
-      method: "POST",
-      headers: { Prefer: "return=minimal" },
-      body: JSON.stringify({ order_id: orderId, status: "pending", note: "Checkout started" }),
-    });
-
-    return json(request, env, { data: { url: session.url, sessionId: session.id, orderNumber } });
+      return json(request, env, {
+        data: { url: session.url, sessionId: session.id, orderNumber },
+      });
+    } catch (err) {
+      if (orderId) {
+        const reason = err instanceof Error ? err.message : "Stripe session creation failed";
+        try {
+          await markCheckoutFailed(env, orderId, reason);
+        } catch {
+          // Best-effort cleanup; original error is still thrown.
+        }
+      }
+      throw err;
+    }
   }
 
   return null;
@@ -147,7 +116,9 @@ export async function handleCheckout(request: Request, env: Env, url: URL) {
 
 export async function handleProfile(request: Request, env: Env, url: URL) {
   if (url.pathname === "/v1/profile" && request.method === "GET") {
+    const { requireUser } = await import("../auth");
     const user = await requireUser(request, env);
+    const { supabaseFetch } = await import("../supabase");
     const rows = (await supabaseFetch(
       env,
       "/rest/v1/profiles?id=eq." + user.id + "&select=*",
@@ -156,8 +127,10 @@ export async function handleProfile(request: Request, env: Env, url: URL) {
   }
 
   if (url.pathname === "/v1/profile" && request.method === "PATCH") {
+    const { requireUser } = await import("../auth");
     const user = await requireUser(request, env);
     const { profileUpdateSchema, parseBody } = await import("../validation");
+    const { supabaseFetch } = await import("../supabase");
     const body = parseBody(profileUpdateSchema, await request.json());
     const patch: Record<string, string | undefined> = {};
     if (body.fullName !== undefined) patch.full_name = body.fullName;

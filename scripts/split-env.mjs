@@ -12,11 +12,7 @@ const deployPath = resolve(root, ".env.deploy");
 const workerPath = resolve(root, "worker/.dev.vars");
 
 const frontendKeys = new Set(["VITE_API_BASE_URL", "VITE_SUPABASE_URL", "VITE_SUPABASE_ANON_KEY", "VITE_SITE_URL"]);
-const deployKeys = new Set([
-  "CLOUDFLARE_API_TOKEN",
-  "CLOUDFLARE_ACCOUNT_ID",
-  "CLOUDFLARE_PAGES_PROJECT_NAME",
-]);
+const deployKeys = new Set(["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_PAGES_PROJECT_NAME"]);
 const workerKeys = new Set([
   "SUPABASE_URL",
   "SUPABASE_SERVICE_ROLE_KEY",
@@ -35,21 +31,19 @@ const workerKeys = new Set([
 ]);
 
 function parse(path) {
-  const lines = readFileSync(path, "utf8").split("\n");
+  if (!existsSync(path)) return { map: {} };
   const map = {};
-  const raw = {};
-  for (const line of lines) {
+  for (const line of readFileSync(path, "utf8").split("\n")) {
     const t = line.trim();
     if (!t || t.startsWith("#")) continue;
     const eq = t.indexOf("=");
     if (eq < 0) continue;
     const k = t.slice(0, eq).trim();
-    raw[k] = t;
     let v = t.slice(eq + 1).trim();
     if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) v = v.slice(1, -1);
     map[k] = v;
   }
-  return { map, raw };
+  return { map };
 }
 
 if (!existsSync(localPath)) {
@@ -58,8 +52,8 @@ if (!existsSync(localPath)) {
 }
 
 const { map } = parse(localPath);
-const existingWorker = existsSync(workerPath) ? parse(workerPath).map : {};
-const existingDeploy = existsSync(deployPath) ? parse(deployPath).map : {};
+const existingWorker = parse(workerPath).map;
+const existingDeploy = parse(deployPath).map;
 
 const frontend = {};
 const deploy = { ...existingDeploy };
@@ -67,26 +61,32 @@ const worker = { ...existingWorker };
 
 for (const [k, v] of Object.entries(map)) {
   if (frontendKeys.has(k)) frontend[k] = v;
-  else if (deployKeys.has(k)) deploy[k] = v;
-  else if (workerKeys.has(k)) worker[k] = worker[k] || v;
-  else if (k.startsWith("VITE_")) frontend[k] = v;
+  else if (deployKeys.has(k)) deploy[k] = v || deploy[k];
+  else if (workerKeys.has(k)) worker[k] = v || worker[k];
+  else if (k === "SUPABASE_URL") worker.SUPABASE_URL = worker.SUPABASE_URL || v;
+  else if (k.startsWith("VITE_")) {
+    /* drop unexpected VITE_ keys */
+  } else if (deployKeys.has(k)) deploy[k] = v;
   else worker[k] = worker[k] || v;
 }
 
-// Expected production defaults when unset
-worker.STRIPE_SUCCESS_URL =
-  worker.STRIPE_SUCCESS_URL ||
-  "https://brew-bean-coffee.pages.dev/success?session_id={CHECKOUT_SESSION_ID}";
-worker.STRIPE_CANCEL_URL = worker.STRIPE_CANCEL_URL || "https://brew-bean-coffee.pages.dev/cart";
-worker.ALLOWED_ORIGINS = worker.ALLOWED_ORIGINS || "https://brew-bean-coffee.pages.dev";
-deploy.CLOUDFLARE_PAGES_PROJECT_NAME = deploy.CLOUDFLARE_PAGES_PROJECT_NAME || "brew-bean-coffee";
-frontend.VITE_API_BASE_URL = frontend.VITE_API_BASE_URL || "https://coffee-shop-api.brewbean.workers.dev";
-frontend.VITE_SITE_URL = frontend.VITE_SITE_URL || "https://brew-bean-coffee.pages.dev";
+// Production URLs (non-secret)
+frontend.VITE_API_BASE_URL = "https://coffee-shop-api.brewbean.workers.dev";
+frontend.VITE_SITE_URL = "https://brew-bean-coffee.pages.dev";
+worker.STRIPE_SUCCESS_URL = "https://brew-bean-coffee.pages.dev/success?session_id={CHECKOUT_SESSION_ID}";
+worker.STRIPE_CANCEL_URL = "https://brew-bean-coffee.pages.dev/cart";
+worker.ALLOWED_ORIGINS = "http://localhost:5173,https://brew-bean-coffee.pages.dev";
+deploy.CLOUDFLARE_PAGES_PROJECT_NAME = deploy.CLOUDFLARE_PAGES_PROJECT_NAME || map.CLOUDFLARE_PAGES_PROJECT_NAME || "brew-bean-coffee";
+
+if (!worker.SUPABASE_URL && frontend.VITE_SUPABASE_URL) {
+  worker.SUPABASE_URL = frontend.VITE_SUPABASE_URL;
+}
 
 function formatBlock(title, entries) {
   const lines = [`# ${title}`, ""];
   for (const [k, v] of Object.entries(entries)) {
-    const needsQuote = /[\s&<>]/.test(v);
+    if (v === undefined || v === "") continue;
+    const needsQuote = /[\s&<>{}]/.test(v);
     lines.push(`${k}=${needsQuote ? `"${v}"` : v}`);
   }
   lines.push("");

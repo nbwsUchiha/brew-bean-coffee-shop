@@ -59,6 +59,7 @@ export type Profile = {
 export type Order = {
   id: string;
   order_number: string | null;
+  user_id: string | null;
   customer_email: string | null;
   customer_name: string | null;
   subtotal_cents: number | null;
@@ -88,6 +89,11 @@ export type SiteStats = {
   ordersFulfilled: number;
   lastOrderAt: string | null;
   pickupMinutes: number;
+  featuredCount: number;
+  categoryCount: number;
+  ordersToday: number;
+  queueAhead: number;
+  lowStockCount: number;
 };
 
 export function effectivePrice(product: Product): number {

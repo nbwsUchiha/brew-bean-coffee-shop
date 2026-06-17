@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { priceCart, effectivePriceCents } from "../src/pricing";
 import type { Env, Product } from "../src/types";
-import { verifyStripeWebhook } from "../src/stripe";
+import { verifyStripeWebhook, signStripeWebhook } from "../src/stripe";
 import { cartLineSchema, checkoutSchema } from "../src/validation";
 
 const env = {
@@ -74,5 +74,13 @@ describe("stripe webhook", () => {
   it("rejects missing signature", async () => {
     const ok = await verifyStripeWebhook("{}", null, "whsec_test");
     expect(ok).toBe(false);
+  });
+
+  it("accepts a correctly signed payload", async () => {
+    const secret = "whsec_test_signing_key";
+    const payload = '{"id":"evt_test","type":"checkout.session.completed"}';
+    const header = await signStripeWebhook(payload, secret);
+    const ok = await verifyStripeWebhook(payload, header, secret);
+    expect(ok).toBe(true);
   });
 });

@@ -18,9 +18,28 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
+      - run: node scripts/scan-bundle-secrets.mjs
       - working-directory: worker
         run: npm ci
       - working-directory: worker
         run: npm run lint
       - working-directory: worker
         run: npm test
+      - working-directory: worker
+        run: npm run dry-run
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install chromium
+      - run: npm run test:e2e
+        env:
+          PLAYWRIGHT_BASE_URL: https://brew-bean-coffee.pages.dev
+          PLAYWRIGHT_API_URL: https://coffee-shop-api.brewbean.workers.dev

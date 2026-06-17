@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="Iced americano">
+  <rect width="400" height="300" fill="#e8eef5"/>
+  <rect x="160" y="45" width="80" height="210" rx="10" fill="#a8c4d9" opacity=".5"/>
+  <rect x="168" y="90" width="64" height="140" rx="6" fill="#4a3728"/>
+  <rect x="172" y="100" width="56" height="30" rx="4" fill="#6b4423" opacity=".7"/>
+  <rect x="175" y="55" width="50" height="12" rx="3" fill="#d4e4f0"/>
+</svg>

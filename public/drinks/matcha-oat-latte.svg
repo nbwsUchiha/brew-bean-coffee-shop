@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="Matcha oat latte">
+  <rect width="400" height="300" fill="#eef3e8"/>
+  <rect x="145" y="65" width="110" height="165" rx="18" fill="#7a9b5c"/>
+  <ellipse cx="200" cy="75" rx="65" ry="16" fill="#c8ddb0"/>
+  <circle cx="175" cy="140" r="8" fill="#a8c686" opacity=".5"/>
+  <circle cx="220" cy="160" r="6" fill="#a8c686" opacity=".4"/>
+</svg>
